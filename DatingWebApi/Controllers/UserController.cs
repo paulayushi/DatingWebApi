@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
 using DatingWebApi.DTO;
+using DatingWebApi.Helper;
 using DatingWebApi.Models;
 using DatingWebApi.Repository;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +15,7 @@ namespace DatingWebApi.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
+    [ServiceFilter(typeof(LoggedHelperExtension))]
     public class UserController : ControllerBase
     {
         private readonly IDatingRepository _repo;
@@ -24,14 +28,23 @@ namespace DatingWebApi.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers([FromQuery] UserParams userParams)
         {
-            var users = await _repo.GetUsers();
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+            userParams.UserId = userId;
+            if (string.IsNullOrEmpty(userParams.Gender))
+            {
+                var userFromRepo = await _repo.GetUser(userId);
+                userParams.Gender = (userFromRepo.Gender.ToLower() == "male") ? "female" : "male";
+            }
+            
+            var users = await _repo.GetUsers(userParams);
             var resultToReturn = _mapper.Map<IEnumerable<UserForListDto>>(users);
+            Response.AddPaging(users.CurrentPage, users.PageSize, users.TotalPages, users.TotalCount);
             return Ok(resultToReturn);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id}", Name = "GetUser")]
         public async Task<IActionResult> GetUser(int id)
         {
             var user = await _repo.GetUser(id);
@@ -50,5 +63,25 @@ namespace DatingWebApi.Controllers
         {
             _repo.Delete<User>(user);
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateUser(int id, UserForUpdateDto userForUpdateDto)
+        {
+            if (id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
+                return Unauthorized();
+
+            var user = await _repo.GetUser(id);
+            if(user != null)
+            {                
+               _mapper.Map(userForUpdateDto, user);
+                if (await _repo.SaveAll())
+                    return NoContent();
+
+                throw new Exception($"Updating user {id} failed on save");
+            }
+
+            throw new Exception($"User with {id} does not exist");
+        }
+
     }
 }

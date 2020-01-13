@@ -27,6 +27,10 @@ namespace DatingWebApi.DTO
                     src.MapFrom(user => user.DateOfBirth.CalculateAge());
                 });
             CreateMap<Photo, PhotosForDetailedDto>();
+            CreateMap<UserForUpdateDto, User>();
+            CreateMap<PhotosToCreateDto, Photo>();
+            CreateMap<Photo, PhotoForReturnDto>();
+            CreateMap<UserToRegisterDto, User>();
         }
     }
 }

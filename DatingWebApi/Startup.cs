@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using AutoMapper;
+using DatingWebApi.Helper;
 
 namespace DatingWebApi
 {
@@ -32,6 +33,7 @@ namespace DatingWebApi
             services.AddCors();
             services.AddScoped<IAuthRepository, AuthRepository>();
             services.AddScoped<IDatingRepository, DatingRepository>();
+            services.Configure<CloudinarySettings>(Configuration.GetSection("CloudinarySettings"));
             services.AddControllers().AddNewtonsoftJson(option =>
             {
                 option.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
@@ -48,6 +50,7 @@ namespace DatingWebApi
                         ValidateAudience = false
                     };
                 });
+            services.AddScoped<LoggedHelperExtension>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
